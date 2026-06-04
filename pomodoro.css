@@ -186,7 +186,7 @@ button:disabled { opacity: .45; cursor: default; }
   margin: .15rem 0 .6rem;
 }
 .study-task {
-  font-size: clamp(1rem, 3vw, 1.4rem);
+  font-size: clamp(1.1rem, 5vw, 1.4rem);
   font-weight: 600;
   max-width: 520px;
   margin: .2rem 0;
@@ -206,3 +206,24 @@ button:disabled { opacity: .45; cursor: default; }
 #studyMusicBox { margin-top: 1.75rem; width: min(220px, 70vw); }
 #studyMusicBox label { text-align: center; }
 #studyMusicVol { width: 100%; }
+
+/* ── Mobile tweaks ────────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* Larger tap targets for all inputs/buttons */
+  input, button, textarea, select {
+    padding: .65rem .6rem;
+    font-size: 1rem;
+  }
+  label { font-size: .9rem; }
+
+  #setupView { padding: .75rem 1rem; }
+
+  /* Bigger study controls on phone */
+  .study-controls button {
+    min-width: 80px;
+    padding: .75rem 1.1rem;
+    font-size: 1rem;
+  }
+  .big-timer { font-size: clamp(4rem, 20vw, 7rem); }
+  .study-task { font-size: clamp(1.1rem, 5.5vw, 1.4rem); }
+}

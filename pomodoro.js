@@ -463,13 +463,14 @@ function renderLists() {
       const cb = document.createElement('input');
       cb.type = 'checkbox';
       cb.dataset.task = t;
+      cb.addEventListener('change', updateSelectAllBtn);
       lbl.appendChild(cb);
       // Strip markdown links for display in the list — raw value is preserved in cb.dataset.task
       lbl.append(t.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'));
       pane.appendChild(lbl);
     });
 
-    header.addEventListener('click', () => pane.classList.toggle('open'));
+    header.addEventListener('click', () => { pane.classList.toggle('open'); updateSelectAllBtn(); });
     item.appendChild(header);
     item.appendChild(pane);
     container.appendChild(item);
@@ -523,3 +524,23 @@ document.getElementById('importFile').addEventListener('change', (e) => {
 });
 
 renderLists();
+
+function updateSelectAllBtn() {
+  const all     = document.querySelectorAll('#savedLists input[type=checkbox]');
+  const checked = document.querySelectorAll('#savedLists input[type=checkbox]:checked');
+  const btn = document.getElementById('selectAllBtn');
+  if (!btn) return;
+  btn.textContent = (all.length && checked.length === all.length) ? 'Deselect all' : 'Select all';
+}
+
+document.getElementById('selectAllBtn').addEventListener('click', () => {
+  const all        = [...document.querySelectorAll('#savedLists input[type=checkbox]')];
+  const checked    = all.filter(cb => cb.checked);
+  const shouldCheck = checked.length < all.length;
+  // Open all panes so the user can see what they're selecting
+  if (shouldCheck) {
+    document.querySelectorAll('#savedLists .list-tasks').forEach(p => p.classList.add('open'));
+  }
+  all.forEach(cb => { cb.checked = shouldCheck; });
+  updateSelectAllBtn();
+});

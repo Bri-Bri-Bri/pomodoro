@@ -440,6 +440,12 @@ function renderLists() {
     countSpan.className = 'list-count';
     countSpan.textContent = tasks.length + ' tasks';
 
+    // Per-list select-all toggle
+    const selAllBtn = document.createElement('button');
+    selAllBtn.className = 'select-all-btn';
+    selAllBtn.textContent = 'all';
+    selAllBtn.title = 'Select / deselect all in this list';
+
     const delBtn = document.createElement('button');
     delBtn.className = 'del-btn';
     delBtn.textContent = '\u2715';
@@ -453,24 +459,42 @@ function renderLists() {
 
     header.appendChild(nameSpan);
     header.appendChild(countSpan);
+    header.appendChild(selAllBtn);
     header.appendChild(delBtn);
 
     const pane = document.createElement('div');
     pane.className = 'list-tasks';
+
+    function updateSelAllBtn() {
+      const all     = pane.querySelectorAll('input[type=checkbox]');
+      const checked = pane.querySelectorAll('input[type=checkbox]:checked');
+      selAllBtn.textContent = (all.length && checked.length === all.length) ? 'none' : 'all';
+    }
+
     tasks.forEach((t) => {
       const lbl = document.createElement('label');
       lbl.className = 'task-check';
       const cb = document.createElement('input');
       cb.type = 'checkbox';
       cb.dataset.task = t;
-      cb.addEventListener('change', updateSelectAllBtn);
+      cb.addEventListener('change', updateSelAllBtn);
       lbl.appendChild(cb);
-      // Strip markdown links for display in the list — raw value is preserved in cb.dataset.task
+      // Strip markdown links for display — raw value preserved in cb.dataset.task
       lbl.append(t.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'));
       pane.appendChild(lbl);
     });
 
-    header.addEventListener('click', () => { pane.classList.toggle('open'); updateSelectAllBtn(); });
+    selAllBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const all      = [...pane.querySelectorAll('input[type=checkbox]')];
+      const checked  = all.filter(cb => cb.checked);
+      const doCheck  = checked.length < all.length;
+      if (doCheck) pane.classList.add('open');
+      all.forEach(cb => { cb.checked = doCheck; });
+      updateSelAllBtn();
+    });
+
+    header.addEventListener('click', () => pane.classList.toggle('open'));
     item.appendChild(header);
     item.appendChild(pane);
     container.appendChild(item);
@@ -524,23 +548,3 @@ document.getElementById('importFile').addEventListener('change', (e) => {
 });
 
 renderLists();
-
-function updateSelectAllBtn() {
-  const all     = document.querySelectorAll('#savedLists input[type=checkbox]');
-  const checked = document.querySelectorAll('#savedLists input[type=checkbox]:checked');
-  const btn = document.getElementById('selectAllBtn');
-  if (!btn) return;
-  btn.textContent = (all.length && checked.length === all.length) ? 'Deselect all' : 'Select all';
-}
-
-document.getElementById('selectAllBtn').addEventListener('click', () => {
-  const all        = [...document.querySelectorAll('#savedLists input[type=checkbox]')];
-  const checked    = all.filter(cb => cb.checked);
-  const shouldCheck = checked.length < all.length;
-  // Open all panes so the user can see what they're selecting
-  if (shouldCheck) {
-    document.querySelectorAll('#savedLists .list-tasks').forEach(p => p.classList.add('open'));
-  }
-  all.forEach(cb => { cb.checked = shouldCheck; });
-  updateSelectAllBtn();
-});

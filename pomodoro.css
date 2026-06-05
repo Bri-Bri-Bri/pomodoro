@@ -83,9 +83,17 @@ label.task-check:has(> input:checked)::before { content: " ✓ "; }
 
 .load-btn { width: 100%; margin-top: .75rem; padding: .45rem; font-size: .85rem; cursor: pointer; }
 
-.select-row { display: flex; margin-top: .5rem; }
-.select-row button { font-size: .8rem; padding: .3rem .6rem; width: auto; color: #666; background: none; border: 1px solid #ddd; }
-.select-row button:hover { background: #f5f5f5; color: #111; border-color: #bbb; }
+.select-all-btn {
+  background: none;
+  border: none;
+  font-size: .75rem;
+  color: #aaa;
+  cursor: pointer;
+  padding: 0 .1rem;
+  width: auto;
+  flex-shrink: 0;
+}
+.select-all-btn:hover { color: #520052; background: none; }
 
 .io-row { display: flex; gap: .4rem; margin-top: .75rem; }
 .io-row button { flex: 1; font-size: .8rem; padding: .35rem .4rem; cursor: pointer; width: auto; }

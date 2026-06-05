@@ -38,8 +38,9 @@
 
     <!-- Setup view -->
     <div id="setupView">
-      <label>Tasks (one per line)</label>
-      <textarea id="tasks" rows="6" placeholder="Write tasks here, top = first"></textarea>
+      <label>Tasks <span style="font-weight:400;color:#aaa">(drag ⠿ to reorder · use [text](url) for links)</span></label>
+      <div id="taskContainer"></div>
+      <button id="addTaskBtn" type="button">+ Add task</button>
 
       <div class="row">
         <div><label>Focus (min)</label><input id="focusM" type="number" value="25" min="1"></div>
@@ -97,6 +98,7 @@
 
   </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
 <script src="pomodoro.js"></script>
 </body>
 </html>

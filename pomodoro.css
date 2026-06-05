@@ -88,6 +88,57 @@ label.task-check:has(> input:checked)::before { content: " ✓ "; }
 
 .empty-msg { font-size: .83rem; color: #bbb; margin: .5rem 0; }
 
+/* ── Task rows ────────────────────────────────────────────── */
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  margin: .2rem 0;
+}
+.drag-handle {
+  cursor: grab;
+  color: #ccc;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  padding: 0 .1rem;
+  user-select: none;
+  touch-action: none;
+  line-height: 1;
+}
+.drag-handle:active { cursor: grabbing; }
+.task-row input { flex: 1; margin: 0; }
+.del-task-btn {
+  width: auto;
+  flex-shrink: 0;
+  padding: .3rem .5rem;
+  background: none;
+  border: 1px solid #e0e0e0;
+  color: #ccc;
+  cursor: pointer;
+  border-radius: 5px;
+  line-height: 1;
+}
+.del-task-btn:hover { color: #e00; border-color: #e00; background: none; }
+.task-row.sortable-ghost { opacity: .3; }
+.task-row.sortable-chosen { background: #f8f8ff; border-radius: 5px; }
+#addTaskBtn {
+  margin-top: .4rem;
+  background: none;
+  border: 1px dashed #ccc;
+  color: #999;
+  font-size: .85rem;
+  padding: .35rem;
+}
+#addTaskBtn:hover { border-color: #888; color: #333; background: none; }
+
+/* Links rendered inside the study task display */
+#studyTask a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
 /* ── Main ─────────────────────────────────────────────────── */
 #main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 

@@ -1,5 +1,6 @@
 // ── Element refs ──────────────────────────────────────────────
-const tasksEl       = document.getElementById('tasks');
+const taskContainer = document.getElementById('taskContainer');
+const addTaskBtn    = document.getElementById('addTaskBtn');
 const focusM        = document.getElementById('focusM');
 const shortM        = document.getElementById('shortM');
 const longM         = document.getElementById('longM');
@@ -26,20 +27,87 @@ const studyMusicVol = document.getElementById('studyMusicVol');
 const sidebar       = document.getElementById('sidebar');
 const sidebarToggle = document.getElementById('sidebarToggle');
 
-// ── Settings persistence ──────────────────────────────────────
+// ── Task rows ──────────────────────────────────────────────────
+function createTaskRow(value = '') {
+  const row = document.createElement('div');
+  row.className = 'task-row';
+
+  const handle = document.createElement('span');
+  handle.className = 'drag-handle';
+  handle.textContent = '\u283f';
+  handle.setAttribute('aria-hidden', 'true');
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = value;
+  input.placeholder = 'Task... (use [link text](url) for links)';
+  input.addEventListener('input', scheduleSave);
+
+  const del = document.createElement('button');
+  del.type = 'button';
+  del.className = 'del-task-btn';
+  del.textContent = '\u2715';
+  del.title = 'Remove task';
+  del.addEventListener('click', () => {
+    if (taskContainer.querySelectorAll('.task-row').length > 1) row.remove();
+    scheduleSave();
+  });
+
+  row.appendChild(handle);
+  row.appendChild(input);
+  row.appendChild(del);
+  return row;
+}
+
+function getTaskValues() {
+  return [...taskContainer.querySelectorAll('.task-row input')].map(i => i.value);
+}
+
+function initTaskContainer() {
+  if (!taskContainer.children.length) {
+    for (let i = 0; i < 4; i++) taskContainer.appendChild(createTaskRow());
+  }
+}
+
+addTaskBtn.addEventListener('click', () => {
+  const row = createTaskRow();
+  taskContainer.appendChild(row);
+  row.querySelector('input').focus();
+  scheduleSave();
+});
+
+// Sortable drag-and-drop (works on both desktop and touch via SortableJS)
+if (typeof Sortable !== 'undefined') {
+  Sortable.create(taskContainer, {
+    handle: '.drag-handle',
+    animation: 150,
+    onEnd: scheduleSave,
+  });
+}
+
+// ── Markdown link parsing ──────────────────────────────────────
+// Syntax: [link text](https://url)  — not read aloud, clickable in study view
+function parseLinks(text) {
+  const html  = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  const plain = text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+  return { html, plain };
+}
+
+// ── Settings persistence ───────────────────────────────────────
 const SETTINGS_KEY = 'pomodoro_settings';
 
 function saveSettings() {
   const settings = {
-    tasks:      tasksEl.value,
-    focusM:     focusM.value,
-    shortM:     shortM.value,
-    longM:      longM.value,
-    longEvery:  longEvery.value,
-    musicMode:  musicMode.value,
-    musicVol:   musicVol.value,
-    vol:        vol.value,
-    voiceName:  voices[parseInt(voiceSelect.value || '0')]?.name || '',
+    tasks:     getTaskValues(),
+    focusM:    focusM.value,
+    shortM:    shortM.value,
+    longM:     longM.value,
+    longEvery: longEvery.value,
+    musicMode: musicMode.value,
+    musicVol:  musicVol.value,
+    vol:       vol.value,
+    voiceName: voices[parseInt(voiceSelect.value || '0')]?.name || '',
   };
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 }
@@ -47,7 +115,14 @@ function saveSettings() {
 function restoreSettings() {
   try {
     const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
-    if (s.tasks     !== undefined) tasksEl.value    = s.tasks;
+    if (Array.isArray(s.tasks) && s.tasks.length) {
+      taskContainer.innerHTML = '';
+      s.tasks.forEach(t => taskContainer.appendChild(createTaskRow(t)));
+    } else if (typeof s.tasks === 'string' && s.tasks) {
+      // backward compat with old textarea format
+      taskContainer.innerHTML = '';
+      s.tasks.split('\n').filter(Boolean).forEach(t => taskContainer.appendChild(createTaskRow(t)));
+    }
     if (s.focusM)    focusM.value    = s.focusM;
     if (s.shortM)    shortM.value    = s.shortM;
     if (s.longM)     longM.value     = s.longM;
@@ -58,15 +133,13 @@ function restoreSettings() {
     }
     if (s.musicVol !== undefined) setMusicVol(parseFloat(s.musicVol));
     if (s.vol      !== undefined) vol.value = s.vol;
-    // Voice is restored by name after voices load (see populateVoices)
     if (s.voiceName) restoreSettings._pendingVoice = s.voiceName;
-  } catch (e) { /* ignore corrupt settings */ }
+  } catch (e) { /* ignore corrupt data */ }
 }
 
-// Debounced auto-save on any input change in the setup form
 let _saveTimeout;
 function scheduleSave() { clearTimeout(_saveTimeout); _saveTimeout = setTimeout(saveSettings, 400); }
-[tasksEl, focusM, shortM, longM, longEvery, musicMode, musicVol, vol, voiceSelect]
+[focusM, shortM, longM, longEvery, musicMode, musicVol, vol, voiceSelect]
   .forEach(el => el.addEventListener('input', scheduleSave));
 
 // ── Voice ──────────────────────────────────────────────────────
@@ -79,7 +152,7 @@ function populateVoices() {
   voices.forEach((v, i) => {
     const o = document.createElement('option');
     o.value = i;
-    o.textContent = v.name + ' (' + v.lang + (v.default ? ' ★' : '') + ')';
+    o.textContent = v.name + ' (' + v.lang + (v.default ? ' \u2605' : '') + ')';
     voiceSelect.appendChild(o);
   });
   // Restore saved voice by name once voices are available
@@ -135,15 +208,18 @@ function stopMusic() {
 }
 
 // ── Timer state ────────────────────────────────────────────────
+// phaseEndTime is an absolute ms timestamp — remaining is always derived from it.
+// This means backgrounding/tab-switching can never desync the countdown.
 let timerInterval = null;
-let remaining = 0;
-let phase = 'idle';
-let cycleCount = 0;
-let taskIndex = 0;
-let taskList = [];
+let phaseEndTime  = null;
+let remaining     = 0;
+let phase         = 'idle';
+let cycleCount    = 0;
+let taskIndex     = 0;
+let taskList      = [];
 
 function loadTasks() {
-  taskList = tasksEl.value.split('\n').map(s => s.trim()).filter(Boolean);
+  taskList = getTaskValues().map(s => s.trim()).filter(Boolean);
   if (!taskList.length) taskList = ['No tasks defined'];
 }
 function formatTime(sec) {
@@ -168,6 +244,7 @@ function startTimer() {
   phase = 'focus';
   remaining = parseInt(focusM.value, 10) * 60;
   announceStart();
+  phaseEndTime = null;
   startInterval();
   pauseBtn.textContent = 'Pause';
   enterStudyMode();
@@ -175,20 +252,31 @@ function startTimer() {
 
 function startInterval() {
   clearInterval(timerInterval);
+  // Pin the end time if not already set (on resume, existing remaining is preserved)
+  if (!phaseEndTime) phaseEndTime = Date.now() + remaining * 1000;
   timerInterval = setInterval(() => {
-    remaining--;
-    if (remaining <= 0) { clearInterval(timerInterval); onPhaseEnd(); }
+    remaining = Math.max(0, Math.ceil((phaseEndTime - Date.now()) / 1000));
+    if (remaining <= 0) {
+      clearInterval(timerInterval); timerInterval = null;
+      phaseEndTime = null;
+      onPhaseEnd();
+      return;
+    }
     refreshUI();
-  }, 1000);
+  }, 500);
   refreshUI();
 }
 
 function pauseTimer() {
   if (timerInterval) {
+    // Snapshot remaining from wall clock before clearing
+    remaining = Math.max(0, Math.ceil((phaseEndTime - Date.now()) / 1000));
     clearInterval(timerInterval); timerInterval = null;
+    phaseEndTime = null;
     pauseBtn.textContent = 'Resume';
     audioPlayer.pause();
   } else {
+    phaseEndTime = null; // let startInterval recalculate from current `remaining`
     startInterval();
     pauseBtn.textContent = 'Pause';
     if (audioPlayer.src && (phase === 'short' || phase === 'long')) audioPlayer.play().catch(() => {});
@@ -197,6 +285,7 @@ function pauseTimer() {
 
 function resetAll() {
   clearInterval(timerInterval); timerInterval = null;
+  phaseEndTime = null;
   phase = 'idle'; remaining = 0; cycleCount = 0; taskIndex = 0;
   pauseBtn.textContent = 'Pause';
   audioPlayer.pause(); audioPlayer.src = '';
@@ -207,6 +296,7 @@ function resetAll() {
 
 function skipPhase() {
   clearInterval(timerInterval); timerInterval = null;
+  phaseEndTime = null;
   onPhaseEnd();
 }
 
@@ -228,34 +318,50 @@ function onPhaseEnd() {
   } else {
     phase = 'idle';
   }
+  phaseEndTime = null;
   startInterval();
   refreshUI();
 }
 
 function announceStart() {
   loadTasks();
-  const t = taskList[taskIndex] || 'Next task';
-  speak('Start focus: ' + t);
+  const raw = taskList[taskIndex] || 'Next task';
+  const { html, plain } = parseLinks(raw);
+  speak('Start focus: ' + plain);
   studyPhase.textContent = 'Focus';
-  studyTask.textContent = t;
-  studyCycle.textContent = 'Cycle ' + (cycleCount + 1) + ' · task ' + (taskIndex + 1) + ' / ' + taskList.length;
+  studyTask.innerHTML = html;
+  studyCycle.textContent = 'Cycle ' + (cycleCount + 1) + ' \u00b7 task ' + (taskIndex + 1) + ' / ' + taskList.length;
 }
 function announceBreakStart() {
   const txt = phase === 'short' ? 'Short break' : 'Long break';
   speak(txt + '. Relax for ' + Math.round(remaining / 60) + ' minutes.');
   studyPhase.textContent = txt;
-  studyTask.textContent = '☕ Rest';
-  studyCycle.textContent = 'Cycle ' + cycleCount + ' — break';
+  studyTask.innerHTML = '\u2615 Rest';
+  studyCycle.textContent = 'Cycle ' + cycleCount + ' \u2014 break';
 }
 
 function refreshUI() {
   studyTimer.textContent = formatTime(remaining || 0);
   if (phase === 'idle') {
     studyPhase.textContent = 'Idle';
-    studyTask.textContent = '';
+    studyTask.innerHTML = '';
     studyCycle.textContent = '';
   }
 }
+
+// ── Page Visibility — resync instantly when tab comes back ─────
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && timerInterval && phaseEndTime) {
+    remaining = Math.max(0, Math.ceil((phaseEndTime - Date.now()) / 1000));
+    if (remaining <= 0) {
+      clearInterval(timerInterval); timerInterval = null;
+      phaseEndTime = null;
+      onPhaseEnd();
+    } else {
+      refreshUI();
+    }
+  }
+});
 
 // ── Sidebar ────────────────────────────────────────────────────
 function openSidebar() {
@@ -274,7 +380,7 @@ function toggleSidebar() {
 
 sidebarToggle.addEventListener('click', toggleSidebar);
 
-// Close sidebar when clicking the dim overlay on mobile
+// Close sidebar when tapping the dim overlay on mobile
 document.addEventListener('click', (e) => {
   if (document.body.classList.contains('sidebar-open') &&
       !sidebar.contains(e.target) &&
@@ -289,6 +395,7 @@ pauseBtn.addEventListener('click', pauseTimer);
 skipBtn.addEventListener('click', skipPhase);
 resetBtn.addEventListener('click', resetAll);
 exitStudyBtn.addEventListener('click', resetAll);
+initTaskContainer();
 resetAll();
 restoreSettings();
 
@@ -335,7 +442,7 @@ function renderLists() {
 
     const delBtn = document.createElement('button');
     delBtn.className = 'del-btn';
-    delBtn.textContent = '✕';
+    delBtn.textContent = '\u2715';
     delBtn.title = 'Delete list';
     delBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -357,7 +464,8 @@ function renderLists() {
       cb.type = 'checkbox';
       cb.dataset.task = t;
       lbl.appendChild(cb);
-      lbl.append(t);
+      // Strip markdown links for display in the list — raw value is preserved in cb.dataset.task
+      lbl.append(t.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'));
       pane.appendChild(lbl);
     });
 
@@ -371,7 +479,7 @@ function renderLists() {
 document.getElementById('saveListBtn').addEventListener('click', () => {
   const name = document.getElementById('listNameInput').value.trim();
   if (!name) { alert('Enter a list name first.'); return; }
-  const tasks = tasksEl.value.split('\n').map(s => s.trim()).filter(Boolean);
+  const tasks = getTaskValues().filter(Boolean);
   if (!tasks.length) { alert('No tasks in the session to save.'); return; }
   const d = getLists();
   if (d[name] && !confirm('"' + name + '" already exists. Overwrite?')) return;
@@ -384,7 +492,9 @@ document.getElementById('saveListBtn').addEventListener('click', () => {
 document.getElementById('loadSelectedBtn').addEventListener('click', () => {
   const checked = document.querySelectorAll('#savedLists input[type=checkbox]:checked');
   if (!checked.length) { alert('Check some tasks first.'); return; }
-  tasksEl.value = [...checked].map(cb => cb.dataset.task).join('\n');
+  taskContainer.innerHTML = '';
+  [...checked].forEach(cb => taskContainer.appendChild(createTaskRow(cb.dataset.task)));
+  scheduleSave();
   closeSidebar();
 });
 

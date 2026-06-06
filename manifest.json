@@ -2,7 +2,7 @@
   "name": "Pomodoro",
   "short_name": "Pomodoro",
   "description": "Task-reading Pomodoro timer with study mode and saved task lists",
-  "start_url": "/pomodoro/",
+  "start_url": "/pomodoro/pomodoro.html",
   "scope": "/pomodoro/",
   "display": "standalone",
   "orientation": "portrait-primary",

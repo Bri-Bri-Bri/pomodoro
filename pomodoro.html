@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#dc3c37">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#dc3c37">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)"  content="#1a1a1a">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Pomodoro</title>
@@ -13,7 +14,7 @@
 
   <!-- Sidebar: Task Lists -->
   <aside id="sidebar" class="hidden">
-    <h2>📋 Task Lists</h2>
+    <h2>Task Lists</h2>
 
     <div class="save-row">
       <input id="listNameInput" type="text" placeholder="List name…">
@@ -35,8 +36,9 @@
   <div id="main">
 
     <div id="topbar">
-      <button id="sidebarToggle" title="Toggle task lists">☰</button>
+      <button id="sidebarToggle" class="icon-btn" title="Toggle task lists">☰</button>
       <h1>Pomodoro</h1>
+      <button id="themeToggle" class="icon-btn" title="Toggle dark mode">🌙</button>
     </div>
 
     <!-- Setup view -->

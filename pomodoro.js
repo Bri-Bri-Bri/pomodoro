@@ -1,3 +1,9 @@
+// ── Theme (runs first to avoid flash) ────────────────────────
+(function () {
+  const saved = localStorage.getItem('theme');
+  if (saved) document.documentElement.setAttribute('data-theme', saved);
+})();
+
 // ── Element refs ──────────────────────────────────────────────
 const taskContainer = document.getElementById('taskContainer');
 const addTaskBtn    = document.getElementById('addTaskBtn');
@@ -395,6 +401,31 @@ pauseBtn.addEventListener('click', pauseTimer);
 skipBtn.addEventListener('click', skipPhase);
 resetBtn.addEventListener('click', resetAll);
 exitStudyBtn.addEventListener('click', resetAll);
+
+// ── Theme toggle ───────────────────────────────────────────────
+const themeToggle = document.getElementById('themeToggle');
+
+function applyTheme(theme) {
+  if (theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+    localStorage.removeItem('theme');
+  }
+  const isDark = theme === 'dark' ||
+    (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  themeToggle.textContent = isDark ? '\u2600\ufe0f' : '\ud83c\udf19';
+  themeToggle.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+}
+
+themeToggle.addEventListener('click', () => {
+  const current = document.documentElement.getAttribute('data-theme');
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+});
+
+// Apply on load (data-theme already set by inline init, just update the icon)
+applyTheme(localStorage.getItem('theme'));
 initTaskContainer();
 resetAll();
 restoreSettings();
